@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor ebook sfogliabile</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#222;--mut:#777;--line:#e2e0da;--acc:#2f5d7c}
+@media(prefers-color-scheme:dark){:root{--bg:#1b1b1d;--card:#262629;--ink:#eee;--mut:#9a9a9f;--line:#38383c;--acc:#7fb0d1}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif}
+header{padding:18px 24px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:18px}header p{margin:4px 0 0;color:var(--mut);font-size:13px}
+main{display:grid;grid-template-columns:minmax(340px,480px) 1fr;gap:20px;padding:20px 24px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:14px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.full{grid-column:1/-1}
+label{display:block;font-size:11px;color:var(--mut);margin:6px 0 2px;text-transform:uppercase;letter-spacing:.04em}
+input[type=text],textarea,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);font:inherit}
+select{background:var(--card)}
+textarea{min-height:120px;resize:vertical}
+input[type=color]{width:100%;height:34px;border:1px solid var(--line);border-radius:6px;background:transparent;padding:2px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 10px;border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.sm{padding:3px 8px}
+.sticky{position:sticky;top:12px}
+iframe{width:100%;height:600px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.hint{font-size:12px;color:var(--mut);margin:6px 0}
+.paste{border:1px dashed var(--line);border-radius:6px;padding:8px;font-size:12px;color:var(--mut);text-align:center;margin-top:6px;outline:none}
+.paste:focus{border-color:var(--acc);color:var(--ink)}
+.thumb{display:flex;gap:8px;align-items:center;margin-top:6px}
+.thumb img{height:54px;border-radius:4px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Editor ebook sfogliabile</h1>
+  <p>Il libro si apre come uno vero (computer e iPad). Scrivi o incolla testo, foto e GIF, guarda l'anteprima, poi scarica il file e caricalo su GitHub.</p>
+</header>
+<main>
+  <section id="left"></section>
+  <section class="sticky">
+    <iframe id="prev" title="Anteprima"></iframe>
+    <div class="hint">Nell'anteprima clicca sulla copertina per aprire il libro. Il pulsante «Acquista» qui non porta fuori dalla pagina.</div>
+    <label>Nome della pagina (es. <b>ryokan</b>)</label>
+    <input type="text" id="fname" value="nuovo-ebook" style="max-width:240px">
+    <button id="dl" class="p" style="margin-left:6px">Scarica file per GitHub</button>
+    <span id="msg" class="hint"></span>
+    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+    <div class="hint"><b>Modifica un ebook già online:</b> scegli il nome e premi «Apri». Funziona se questo editor è nella cartella «ebook» di GitHub, insieme ai file.</div>
+    <select id="sel" style="max-width:240px"></select> <button id="open" class="p">Apri ebook</button>
+    <div class="hint">Oppure scegli un file .html scaricato dal computer: <input type="file" id="fileopen" accept=".html,.htm" style="font-size:12px"></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+    <button id="reset">Nuovo ebook vuoto</button>
+  </section>
+</main>
+
+<script>
+var KEY='pk-ebook-v1',MAXP=2;
+function clone(o){return JSON.parse(JSON.stringify(o));}
+var DEF={title:"Titolo del libro",author:"Autore",color:"#2f5d7c",cover:"",buy:"",label:"Acquista",pages:[{t:"",i:""},{t:"",i:""}]};
+var D;try{D=JSON.parse(localStorage.getItem(KEY));}catch(e){}
+if(!D||!Array.isArray(D.pages))D=clone(DEF);
+
+function esc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt(t){return String(t).split(/\n\s*\n/).map(function(p){return '<p>'+esc(p.trim()).replace(/\n/g,'<br>')+'</p>';}).join('');}
+
+/* ---------- COSTRUZIONE DEL LIBRO (markup statico, senza immagini: le immagini le mette il runtime) ---------- */
+function coverHtml(d){
+ return '<div class="cvf" style="background-color:'+esc(d.color)+'"><div class="cvi" data-k="c"></div>'+
+  (d.cover?'':'<div class="ct"><b>'+esc(d.title)+'</b>'+(d.author?'<i>'+esc(d.author)+'</i>':'')+'</div>')+'</div>';
+}
+function pageHtml(p,n){
+ var only=p.i&&!(p.t||'').trim();
+ return '<div class="pg'+(only?' only':'')+'">'+(p.i?'<img data-k="p'+(n-1)+'" alt="">':'')+
+  ((p.t||'').trim()?'<div class="tx">'+fmt(p.t)+'</div>':'')+(only?'':'<span class="no">'+n+'</span>')+'</div>';
+}
+function leavesHtml(d){
+ var N=d.pages.length,L=Math.floor(N/2)+(N%2?2:1),h='';
+ function pg(n){return pageHtml(d.pages[n-1],n);}
+ for(var i=0;i<L;i++){
+  var front=i===0?coverHtml(d):(2*i<=N?pg(2*i):'<div class="bc" style="background:'+esc(d.color)+'"></div>');
+  var hasBack=2*i+1<=N;
+  h+='<div class="leaf" data-f="'+(hasBack?1:0)+'"><div class="face f'+(i===0?' c':'')+'">'+front+'</div>'+(hasBack?'<div class="face b">'+pg(2*i+1)+'</div>':'')+'</div>';
+ }
+ return h;
+}
+function mobHtml(d){
+ var h='<div class="mi"><div class="mcard">'+coverHtml(d)+'</div></div>';
+ d.pages.forEach(function(p,k){h+='<div class="mi"><div class="mcard pgc">'+pageHtml(p,k+1)+'</div></div>';});
+ return h;
+}
+
+/* ---------- RUNTIME (dentro la pagina finale) ---------- */
+function rt(){
+ var D=JSON.parse(document.getElementById('pkbook').textContent);
+ [].forEach.call(document.querySelectorAll('[data-k]'),function(el){
+  var k=el.getAttribute('data-k');
+  if(k==='c'){if(D.cover)el.style.backgroundImage='url("'+D.cover+'")';}
+  else{var p=D.pages[+k.slice(1)];if(p&&p.i)el.src=p.i;}
+ });
+ function fit(){[].forEach.call(document.querySelectorAll('.tx'),function(el){el.style.fontSize='';if(!el.clientHeight)return;var f=1;while(el.scrollHeight>el.clientHeight+1&&f>.5){f-=.04;el.style.fontSize=f+'em';}});}
+ window.addEventListener('resize',fit);window.addEventListener('load',fit);
+ var bk=document.getElementById('bk'),leaves=[].slice.call(bk.querySelectorAll('.leaf')),L=leaves.length,cur=0,maxf=0;
+ leaves.forEach(function(l,i){if(l.getAttribute('data-f')==='1')maxf=i+1;});
+ function z(){leaves.forEach(function(l,i){l.style.zIndex=i<cur?i:(L-i);});}
+ function go(n){
+  n=Math.max(0,Math.min(maxf,n));if(n===cur)return;
+  for(var i=Math.min(n,cur);i<Math.max(n,cur);i++)leaves[i].style.zIndex=L+5;
+  cur=n;
+  leaves.forEach(function(l,i){l.classList.toggle('flip',i<cur);});
+  bk.classList.toggle('closed',cur===0);
+  setTimeout(z,380);
+ }
+ z();fit();
+ [].forEach.call(bk.querySelectorAll('.face.f'),function(f){f.addEventListener('click',function(){go(cur+1);});});
+ [].forEach.call(bk.querySelectorAll('.face.b'),function(f){f.addEventListener('click',function(){go(cur-1);});});
+ document.getElementById('nx').onclick=function(){go(cur+1);};
+ document.getElementById('pv').onclick=function(){go(cur-1);};
+ /* telefono: una pagina alla volta */
+ var mi=[].slice.call(document.querySelectorAll('.mi')),ix=0;
+ function show(n){ix=Math.max(0,Math.min(mi.length-1,n));mi.forEach(function(m,i){m.style.display=i===ix?'block':'none';});fit();}
+ show(0);
+ document.getElementById('mn').onclick=function(){show(ix+1);};
+ document.getElementById('mp').onclick=function(){show(ix-1);};
+ var sx=null,mob=document.getElementById('mob');
+ mob.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+ mob.addEventListener('touchend',function(e){if(sx==null)return;var dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>40)show(ix+(dx<0?1:-1));});
+}
+
+var CSS=[
+'*{box-sizing:border-box}',
+'html,body{margin:0;background:#fff}',
+'#w{--pw:clamp(170px,36vw,320px);--ph:calc(var(--pw)*1.4);font-family:Georgia,"Times New Roman",serif;padding:20px 10px 30px;text-align:center}',
+'#stage{display:flex;justify-content:center;height:calc(var(--ph) + 20px);padding-top:10px}',
+'#bk{position:relative;width:calc(var(--pw)*2);height:var(--ph);perspective:2200px;transition:transform .7s cubic-bezier(.4,.1,.2,1)}',
+'#bk.closed{transform:translateX(calc(var(--pw)/-2))}',
+'.leaf{position:absolute;left:50%;top:0;width:var(--pw);height:var(--ph);transform-origin:left center;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.4,.1,.2,1)}',
+'.leaf.flip{transform:rotateY(-180deg)}',
+'.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;background:#fbf8f1;box-shadow:0 6px 18px -8px rgba(0,0,0,.45);cursor:pointer;text-align:left}',
+'.face.b{transform:rotateY(180deg)}',
+'.face.f:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.22),transparent 9%)}',
+'.face.b:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to left,rgba(0,0,0,.22),transparent 9%)}',
+'.face.c{border-radius:2px 6px 6px 2px}',
+'.cvf{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff}',
+'.cvi{position:absolute;inset:0;background:center/cover no-repeat}',
+'.ct{position:relative;text-align:center;padding:12%}',
+'.ct b{display:block;font-weight:normal;font-size:calc(var(--pw)*.085);line-height:1.15;letter-spacing:.03em}',
+'.ct i{display:block;margin-top:.9em;font-style:normal;font-size:calc(var(--pw)*.04);letter-spacing:.14em;text-transform:uppercase;opacity:.85}',
+'.bc{position:absolute;inset:0}',
+'.pg{position:absolute;inset:0;display:flex;flex-direction:column;gap:4%;padding:9% 9% 11%;color:#2a2622;font-size:calc(var(--pw)*.046);line-height:1.5}',
+'.pg img{display:block;width:100%;min-height:0;max-height:62%;object-fit:contain;flex:0 1 auto}',
+'.pg.only{padding:0}.pg.only img{max-height:none;height:100%;object-fit:cover;flex:1}',
+'.tx{overflow:auto;flex:1 1 auto;min-height:0;scrollbar-width:thin}',
+'.tx p{margin:0 0 .8em}',
+'.no{position:absolute;bottom:4%;left:0;right:0;text-align:center;font-size:.7em;color:#9a9288}',
+'#nav{display:flex;justify-content:center;gap:14px;margin-top:6px}',
+'#nav button,#mnav button{border:1px solid #cfc9bd;background:#fff;color:#444;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer}',
+'#meta{margin-top:14px;color:#555;font-size:14px;letter-spacing:.1em;text-transform:uppercase}',
+'#buy{display:inline-block;margin-top:12px;padding:11px 30px;background:#222;color:#fff;text-decoration:none;font-size:14px;letter-spacing:.14em;text-transform:uppercase;border-radius:2px}',
+'#buy:hover{background:#000}',
+'#mob{display:none}',
+'.mcard{position:relative;width:var(--pw);height:var(--ph);margin:0 auto;background:#fbf8f1;box-shadow:0 6px 18px -8px rgba(0,0,0,.45);overflow:hidden;text-align:left}',
+'#mnav{display:flex;justify-content:center;gap:14px;margin-top:12px}',
+'@media(max-width:700px){#w{--pw:min(78vw,340px)}#stage,#nav{display:none}#mob{display:block}}'
+].join('\n');
+
+function fullHtml(d,preview){
+ var json=JSON.stringify(d).replace(/</g,'\\u003c');
+ var buy=d.buy?'<a id="buy" href="'+esc(d.buy)+'" target="_top">'+esc(d.label||'Acquista')+'</a>':'';
+ return '<!doctype html>\n<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_top"><title>'+esc(d.title)+'</title><style>\n'+CSS+'\n</style></head><body>\n'+
+ '<script type="application/json" id="pkbook">'+json+'<\/script>\n'+
+ '<div id="w"><div id="stage"><div id="bk" class="closed">'+leavesHtml(d)+'</div></div>\n'+
+ '<div id="nav"><button id="pv" aria-label="Indietro">&#8249;</button><button id="nx" aria-label="Avanti">&#8250;</button></div>\n'+
+ '<div id="mob">'+mobHtml(d)+'<div id="mnav"><button id="mp" aria-label="Indietro">&#8249;</button><button id="mn" aria-label="Avanti">&#8250;</button></div></div>\n'+
+ '<div id="meta">'+esc(d.title)+(d.author?' &nbsp;&middot;&nbsp; '+esc(d.author):'')+'</div>'+buy+'</div>\n'+
+ '<script>('+rt.toString()+')();'+(preview?'var b=document.getElementById("buy");if(b)b.addEventListener("click",function(e){e.preventDefault();});':'')+'<\/script>\n</body></html>\n';
+}
+
+/* ---------- EDITOR ---------- */
+var left=document.getElementById('left'),prev=document.getElementById('prev'),msg=document.getElementById('msg');
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D));}catch(e){}}
+function refresh(){save();prev.srcdoc=fullHtml(D,true);}
+var tm;function later(){clearTimeout(tm);tm=setTimeout(refresh,300);}
+
+function loadImage(file,cb){
+ if(!file)return;
+ var rd=new FileReader();
+ rd.onload=function(){
+  if(/gif$/i.test(file.type)){
+   if(rd.result.length>1600000)msg.textContent='Attenzione: la GIF pesa '+Math.round(rd.result.length/1048576*10)/10+' MB, il file sara\' pesante.';
+   cb(rd.result);return;
+  }
+  var im=new Image();
+  im.onload=function(){var W=640,sc=Math.min(1,W/im.width),c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+   var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',0.85));};
+  im.src=rd.result;
+ };
+ rd.readAsDataURL(file);
+}
+function imgField(obj,key,label){
+ var w=document.createElement('div');w.className='full';
+ var l=document.createElement('label');l.textContent=label;w.appendChild(l);
+ var has=!!obj[key],emb=has&&obj[key].indexOf('data:')===0;
+ var url=document.createElement('input');url.type='text';url.placeholder=emb?'Immagine caricata (incorporata)':'URL immagine o GIF (facoltativo)';
+ url.value=has&&!emb?obj[key]:'';
+ url.oninput=function(){obj[key]=url.value.trim();later();};
+ w.appendChild(url);
+ var f=document.createElement('input');f.type='file';f.accept='image/*';f.style.cssText='margin-top:6px;font-size:12px;width:100%';
+ f.onchange=function(){loadImage(f.files[0],function(d){obj[key]=d;build();refresh();});};
+ w.appendChild(f);
+ var pz=document.createElement('div');pz.className='paste';pz.tabIndex=0;pz.textContent='Oppure clicca qui e incolla (Ctrl+V) una foto o una GIF';
+ pz.addEventListener('paste',function(e){var it=[].slice.call((e.clipboardData||{}).items||[]).filter(function(i){return i.type.indexOf('image/')===0;})[0];if(!it)return;e.preventDefault();loadImage(it.getAsFile(),function(d){obj[key]=d;build();refresh();});});
+ w.appendChild(pz);
+ if(has){var t=document.createElement('div');t.className='thumb';var im=document.createElement('img');im.src=obj[key];t.appendChild(im);
+  var rm=document.createElement('button');rm.className='sm';rm.textContent='Rimuovi immagine';rm.onclick=function(){obj[key]='';build();refresh();};t.appendChild(rm);w.appendChild(t);}
+ return w;
+}
+function textField(obj,key,label,full,ta){
+ var w=document.createElement('div');if(full)w.className='full';
+ var l=document.createElement('label');l.textContent=label;w.appendChild(l);
+ var i=document.createElement(ta?'textarea':'input');if(!ta)i.type='text';i.value=obj[key]||'';
+ i.oninput=function(){obj[key]=i.value;later();};w.appendChild(i);return w;
+}
+function build(){
+ left.innerHTML='';
+ var c=document.createElement('div');c.className='card';c.innerHTML='<h3>Copertina e acquisto</h3>';
+ var r=document.createElement('div');r.className='row';
+ r.appendChild(textField(D,'title','Titolo',true));
+ r.appendChild(textField(D,'author','Autore',true));
+ var cw=document.createElement('div');var cl=document.createElement('label');cl.textContent='Colore copertina';cw.appendChild(cl);
+ var ci=document.createElement('input');ci.type='color';ci.value=D.color||'#2f5d7c';ci.oninput=function(){D.color=ci.value;later();};cw.appendChild(ci);r.appendChild(cw);
+ r.appendChild(textField(D,'label','Testo del pulsante',false));
+ r.appendChild(imgField(D,'cover','Immagine copertina'));
+ r.appendChild(textField(D,'buy','Link acquista (pagina prodotto)',true));
+ c.appendChild(r);left.appendChild(c);
+ D.pages.forEach(function(p,n){
+  var pc=document.createElement('div');pc.className='card';
+  var h=document.createElement('h3');h.textContent='Pagina '+(n+1);
+  var del=document.createElement('button');del.className='sm';del.textContent='Elimina';del.style.float='right';
+  del.onclick=function(){if(confirm('Eliminare questa pagina?')){D.pages.splice(n,1);build();refresh();}};
+  h.appendChild(del);pc.appendChild(h);
+  var rr=document.createElement('div');rr.className='row';
+  rr.appendChild(textField(p,'t','Testo (riga vuota = nuovo paragrafo)',true,true));
+  rr.appendChild(imgField(p,'i','Foto o GIF della pagina'));
+  pc.appendChild(rr);left.appendChild(pc);
+ });
+ if(D.pages.length<MAXP){var ad=document.createElement('button');ad.className='p';ad.textContent='+ Aggiungi pagina ('+D.pages.length+' di '+MAXP+')';
+  ad.onclick=function(){D.pages.push({t:"",i:""});build();refresh();};left.appendChild(ad);}
+ else{var n=document.createElement('div');n.className='hint';n.textContent='Massimo '+MAXP+' pagine.';left.appendChild(n);}
+}
+
+document.getElementById('dl').onclick=function(){
+ var fn=(document.getElementById('fname').value||'ebook').trim().toLowerCase().replace(/\.html?$/,'').replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'')||'ebook';
+ var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([fullHtml(D,false)],{type:'text/html'}));a.download=fn+'.html';
+ document.body.appendChild(a);a.click();document.body.removeChild(a);
+ msg.textContent='Scaricato '+fn+'.html: caricalo su GitHub (stesso nome per sostituire) e attendi 1-2 minuti.';
+};
+function parseBook(t){var m=/<script type="application\/json" id="pkbook">([\s\S]*?)<\/script>/.exec(t);var d=JSON.parse(m[1]);if(!d||!Array.isArray(d.pages))throw 0;return d;}
+function applyBook(d,name){D=d;if(D.pages.length>MAXP)D.pages=D.pages.slice(0,MAXP);if(name)document.getElementById('fname').value=name;build();refresh();msg.textContent='Ebook «'+(name||'file')+'» caricato.';}
+var sel=document.getElementById('sel');
+function fillSel(a){sel.innerHTML='';a.forEach(function(n){var o=document.createElement('option');o.value=o.textContent=n;sel.appendChild(o);});}
+fillSel([]);
+try{fetch('https://api.github.com/repos/casaeditricepeacock/mensole/contents/ebook').then(function(r){return r.json();}).then(function(a){
+ var n=a.filter(function(f){return /\.html$/.test(f.name)&&!/^editor/.test(f.name);}).map(function(f){return f.name.replace(/\.html$/,'');});fillSel(n);}).catch(function(){});}catch(e){}
+document.getElementById('open').onclick=function(){
+ var n=sel.value;if(!n){msg.textContent='Nessun ebook trovato: usa «scegli file».';return;}
+ msg.textContent='Carico '+n+'...';
+ fetch('./'+n+'.html?'+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(t){applyBook(parseBook(t),n);})
+ .catch(function(){msg.textContent='Non riesco ad aprire '+n+'. Usa «scegli file».';});
+};
+document.getElementById('fileopen').onchange=function(){var f=this.files[0];if(!f)return;var rd=new FileReader();
+ rd.onload=function(){try{applyBook(parseBook(rd.result),f.name.replace(/\.html?$/,'').replace(/\s*\(\d+\)$/,'').replace(/__\d+_$/,''));}catch(e){msg.textContent='File non riconosciuto.';}};rd.readAsText(f);};
+document.getElementById('reset').onclick=function(){if(confirm('Cancellare tutto e ripartire da un ebook vuoto?')){D=clone(DEF);document.getElementById('fname').value='nuovo-ebook';build();refresh();}};
+build();refresh();
+</script>
+</body>
+</html>
