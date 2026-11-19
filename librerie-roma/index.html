@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_top"><title>Novità Casa Editrice Peacock</title><style>body{margin:0;background:#fff}</style></head><body>
+<!-- MENSOLA NOVITA - Casa Editrice Peacock. Copertine = GIF animate su GitHub Pages (cartella librerie-roma). Non rigenerare con l'editor: ricreerebbe JPEG fissi. -->
+<div id="pk-shelf-wrap">
+<style>
+#pk-shelf-wrap{background:#fff;padding:20px 10px 30px;font-family:Georgia,'Times New Roman',serif;box-sizing:border-box}
+#pk-shelf-wrap *{box-sizing:border-box}
+#pk-shelf{position:relative;max-width:1000px;margin:0 auto;padding-bottom:50px}
+#pk-books{display:flex;justify-content:center;align-items:flex-end;padding:70px 20px 0;min-height:340px}
+#pk-shelf-wrap .pk-slot{position:relative;display:block;flex:0 0 auto;width:var(--d);height:var(--h);margin:0 1px;perspective:1100px;text-decoration:none;border:0;transition:opacity .3s;cursor:pointer}
+.pk-book{position:absolute;top:0;left:calc((var(--d) - var(--cw)) / 2);width:var(--cw);height:var(--h);transform-style:preserve-3d;transform:rotateY(90deg);transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.pk-f{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pk-cover{inset:0;transform:translateZ(calc(var(--d) / 2));background:var(--c) center/cover no-repeat;color:var(--tc);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px;box-shadow:inset 6px 0 8px -4px rgba(0,0,0,.35)}
+.pk-cover b{font-size:17px;line-height:1.15;font-weight:normal;letter-spacing:.03em}
+.pk-cover i{margin-top:10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8;font-style:normal}
+.pk-back{inset:0;transform:translateZ(calc(var(--d) / -2)) rotateY(180deg);background:var(--c)}
+.pk-pages{width:var(--d);height:100%;left:calc((var(--cw) - var(--d)) / 2);transform:translateX(calc(var(--cw) / 2)) rotateY(90deg);background:repeating-linear-gradient(#f4f0e6 0 2px,#e4dfd1 2px 3px)}
+.pk-spine{width:var(--d);height:100%;left:calc((var(--cw) - var(--d)) / 2);transform:translateX(calc(var(--cw) / -2)) rotateY(-90deg);background:var(--c);color:var(--tc);display:flex;align-items:center;justify-content:center;box-shadow:inset 3px 0 4px rgba(255,255,255,.15),inset -3px 0 5px rgba(0,0,0,.25)}
+.pk-spine span{writing-mode:vertical-rl;font-size:min(15px,calc(var(--d) * .34));letter-spacing:.06em;line-height:1.1;text-align:center;max-height:calc(100% - 40px);overflow:hidden}
+.pk-spine:before,.pk-spine:after{content:"";position:absolute;left:0;right:0;height:2px;background:currentColor;opacity:.35}
+.pk-spine:before{top:14px}.pk-spine:after{bottom:14px}
+.pk-cap{position:absolute;left:50%;top:calc(var(--h) + 34px);transform:translateX(-50%);white-space:nowrap;opacity:0;pointer-events:none;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#555;transition:opacity .3s}
+#pk-books:hover .pk-slot{opacity:.45}
+#pk-books .pk-slot:hover{opacity:1;z-index:5}
+.pk-slot:hover .pk-book{transform:translateY(-30px) translateZ(150px) rotateY(0deg)}
+.pk-slot:hover .pk-cap{opacity:1}
+#pk-board{height:12px;background:linear-gradient(#d0d0d0,#b2b2b2);box-shadow:0 6px 10px -4px rgba(0,0,0,.25)}
+@media(max-width:700px){
+ #pk-shelf{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ #pk-books{justify-content:center;width:max-content;min-width:100%;min-height:320px;padding:70px 10px 0}
+ #pk-books:hover .pk-slot{opacity:1}
+ .pk-slot:hover .pk-book{transform:translateY(-10px) translateZ(40px) rotateY(0deg)}
+ .pk-cap{display:none}
+}
+</style>
+<div id="pk-shelf"><div id="pk-books">
+<a class="pk-slot" target="_top" href="https://www.aseq.it" title="Libreria ASEQ" style="--h:250px;--d:40px;--cw:170px;--c:#0f0f0f;--tc:#fff"><div class="pk-book"><div class="pk-f pk-cover" style="background-image:url('https://casaeditricepeacock.github.io/mensole/librerie-roma/roma-aseq.gif')"></div><div class="pk-f pk-back"></div><div class="pk-f pk-pages"></div><div class="pk-f pk-spine"><span>Libreria ASEQ</span></div></div><span class="pk-cap">Libreria ASEQ</span></a>
+<a class="pk-slot" target="_top" href="https://www.borribooks.com" title="Borri Books" style="--h:260px;--d:50px;--cw:177px;--c:#eb0f0f;--tc:#fff"><div class="pk-book"><div class="pk-f pk-cover" style="background-image:url('https://casaeditricepeacock.github.io/mensole/librerie-roma/roma-borri-books.gif')"></div><div class="pk-f pk-back"></div><div class="pk-f pk-pages"></div><div class="pk-f pk-spine"><span>Borri Books</span></div></div><span class="pk-cap">Borri Books</span></a>
+<a class="pk-slot" target="_top" href="https://www.claudiana.it/pagina/libreria-di-roma-3.html" title="Libreria Claudiana" style="--h:250px;--d:53px;--cw:170px;--c:#6b6d76;--tc:#fff"><div class="pk-book"><div class="pk-f pk-cover" style="background-image:url('https://casaeditricepeacock.github.io/mensole/librerie-roma/roma-claudiana.gif')"></div><div class="pk-f pk-back"></div><div class="pk-f pk-pages"></div><div class="pk-f pk-spine"><span>Libreria Claudiana</span></div></div><span class="pk-cap">Libreria Claudiana</span></a>
+<a class="pk-slot" target="_top" href="https://www.notebookauditorium.it/" title="NOTEBOOK | Auditorium" style="--h:250px;--d:46px;--cw:170px;--c:#cb9090;--tc:#fff"><div class="pk-book"><div class="pk-f pk-cover" style="background-image:url('https://casaeditricepeacock.github.io/mensole/librerie-roma/roma-notebook-auditorium.gif')"></div><div class="pk-f pk-back"></div><div class="pk-f pk-pages"></div><div class="pk-f pk-spine"><span>NOTEBOOK | Auditorium</span></div></div><span class="pk-cap">NOTEBOOK | Auditorium</span></a>
+</div><div id="pk-board"></div></div>
+</div>
+<script>(function(){document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('a.pk-slot'):null;if(!a)return;var u=a.getAttribute('href');if(!u||u==='#')return;e.preventDefault();try{window.top.location.href=u;}catch(x){window.open(u,'_top');}},true);})();</script>
+</body></html>
